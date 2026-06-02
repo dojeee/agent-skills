@@ -1,77 +1,41 @@
 # DD Agent Skills
 
-A collection of portable, agent-agnostic skills for AI coding assistants. All skills use the `dd-` prefix convention.
+Portable, agent-agnostic skills for AI coding assistants. All skills use the `dd-` prefix convention.
 
-Each skill is a self-contained Markdown file with patterns, checklists, and executable code templates. Designed to work with **Claude Code**, **Codex**, **Cursor**, **Hermes**, and **GitHub Copilot** — no agent-specific tool calls.
+**Works with**: Claude Code, Codex, Cursor, Hermes, GitHub Copilot — zero agent-specific tool calls.
 
 ## Available Skills
 
 ### `dd-webapp-full-test`
 
-Comprehensive web application testing across 6 dimensions:
+Comprehensive web application testing across 6 dimensions. Tell your agent *"test my app thoroughly"* and get a complete audit.
+
+| Step | Output |
+|------|--------|
+| 1. Discovery | Agent explores your app, identifies routes, components, selectors |
+| 2. Test Generation | 6 test spec files written to `e2e/` |
+| 3. Execution | All 6 dimensions run in order |
+| 4. Report | `TEST-REPORT.md` at project root with pass/fail, issues, recommendations |
+| 5. Cleanup | Temporary artifacts removed; scripts + report kept |
 
 | # | Dimension | What it tests |
 |---|-----------|---------------|
 | 1 | **Functional** | Unit tests, component tests, E2E flows, API contract validation |
 | 2 | **Visual** | Screenshot regression, dark mode, responsive breakpoints (24 scenarios) |
 | 3 | **Accessibility** | axe-core scans, keyboard navigation, focus management, ARIA labels |
-| 4 | **Security** | XSS payload injection (50+ vectors), input validation, sensitive data leaks |
+| 4 | **Security** | HTML output safety, input validation, header checks, sensitive data leaks |
 | 5 | **Compatibility** | Multi-browser, offline/slow network, multi-language rendering |
 | 6 | **Performance** | Core Web Vitals, bundle analysis, API latency, CLS, Long Tasks, cache |
 
-**Stack**: Playwright + Vitest + React Testing Library + axe-core. Framework-agnostic — adapts to Next.js, Vite, CRA, or any web app with a dev server.
+> ⚠️ **Provider note**: Some LLM providers (Kimi, Moonshot, enterprise gateways) may flag security test content. The skill handles this gracefully — skips affected tests, notes it in the report, and continues normally.
+
+**Stack**: Playwright + Vitest + React Testing Library + axe-core.
 
 **Files**: [`dd-webapp-full-test/SKILL.md`](dd-webapp-full-test/SKILL.md) + 4 reference checklists.
 
 ---
 
-## Naming Convention
-
-All skills use the `dd-` prefix:
-
-```
-dd-<skill-name>/
-├── SKILL.md
-└── references/
-```
-
-## How Skills Work
-
-Each skill is a standalone `.md` file that coding agents read as instructions. When a user asks for a task that matches the skill's domain, the agent loads the skill and follows its patterns.
-
-**Structure of a skill:**
-
-```
-dd-skill-name/
-├── SKILL.md              # Main instructions: patterns, code templates, pitfalls
-└── references/           # Detailed checklists, payload lists, metric definitions
-    ├── checklist.md
-    └── payloads.md
-```
-
-**What makes a good skill:**
-
-- **Portable**: No tool calls specific to any one agent. Pure code patterns + checklists.
-- **Actionable**: Copy-paste code templates, not abstract advice.
-- **Complete**: Covers the happy path AND edge cases, pitfalls, and cleanup.
-- **Self-contained**: All context needed is in the skill file (or its references).
-
 ## Installation
-
-Each skill follows the same install pattern. An AI agent given this repo URL + a skill name should:
-
-1. Clone or download the repo
-2. Copy the skill directory to the agent-specific location
-3. Verify the `SKILL.md` + `references/` are in place
-
-### Agent-Specific Install Paths
-
-| Agent | Skills Directory | Discovery |
-|-------|-----------------|-----------|
-| **Claude Code** | `<project>/.claude/skills/` | Referenced from `CLAUDE.md` or loaded automatically |
-| **Hermes** | `~/.hermes/skills/` | Auto-discovered by frontmatter `triggers` |
-| **Codex / Cursor** | `<project>/.codex/skills/` | Referenced from `AGENTS.md` |
-| **GitHub Copilot** | `<project>/.github/copilot/` | Referenced from `.github/copilot-instructions.md` |
 
 ### Install via Agent
 
@@ -106,61 +70,55 @@ ls .claude/skills/dd-webapp-full-test/references/
 rm -rf /tmp/agent-skills
 ```
 
-### Install a Single Skill Manually
+### Agent-Specific Paths
 
-```bash
-# From the repo root
-AGENT_SKILLS_DIR=".claude/skills"  # change to your agent's path
-SKILL="dd-webapp-full-test"
-
-mkdir -p "$AGENT_SKILLS_DIR"
-cp -r "$SKILL" "$AGENT_SKILLS_DIR/"
-echo "Installed $SKILL → $AGENT_SKILLS_DIR/$SKILL/"
-```
+| Agent | Skills Directory | Discovery |
+|-------|-----------------|-----------|
+| **Claude Code** | `<project>/.claude/skills/` | Referenced from `CLAUDE.md` |
+| **Hermes** | `~/.hermes/skills/` | Auto-discovered by triggers |
+| **Codex / Cursor** | `<project>/.codex/skills/` | Referenced from `AGENTS.md` |
+| **GitHub Copilot** | `<project>/.github/copilot/` | `.github/copilot-instructions.md` |
 
 ### Verify Installation
 
 ```bash
-# Check the skill file exists
-cat .claude/skills/dd-webapp-full-test/SKILL.md | head -5
-
+cat .claude/skills/dd-webapp-full-test/SKILL.md | head -6
 # Should show:
 # ---
 # name: dd-webapp-full-test
 # description: |
-#   Comprehensive web app testing covering 6 dimensions...
+#   Comprehensive web app testing across 6 dimensions...
 ```
 
-### After Install — Reference in Project Config
-
-Add to `CLAUDE.md` (Claude Code) or `AGENTS.md` (Codex):
+### Post-Install — Reference in Project Config
 
 ```markdown
-## Testing
+# CLAUDE.md or AGENTS.md
 
-For comprehensive testing, load `.claude/skills/dd-webapp-full-test/SKILL.md`.
-Covers: functional, visual regression, accessibility, security, compatibility, performance.
+## Testing
+For comprehensive testing (6 dimensions: functional, visual, a11y, security,
+compatibility, performance), load `.claude/skills/dd-webapp-full-test/SKILL.md`.
+```
+
+## Naming Convention
+
+All skills use the `dd-` prefix:
+
+```
+dd-<skill-name>/
+├── SKILL.md              # Main instructions: patterns, code templates, pitfalls
+└── references/           # Detailed checklists, payload lists, metric definitions
 ```
 
 ## Contributing
 
-Skills follow a `dd-SKILL.md` + `references/` structure:
-
-```
-dd-your-skill/
-├── SKILL.md              # Required: main skill file with patterns and instructions
-└── references/           # Optional: detailed lists, tables, payload collections
-    ├── checklist.md
-    └── data.json
-```
-
 Guidelines:
 - Prefix with `dd-`
-- Pure English (code examples may contain non-English content for testing purposes)
-- No agent-specific tool calls (`browser_snapshot`, `skill_view`, etc.)
-- Code templates should be copy-paste ready
+- Pure English (code examples may contain non-English content for testing)
+- No agent-specific tool calls
 - Include a "Pitfalls" section with common mistakes
 - Test your skill against a deliberately buggy app to verify it catches issues
+- Be mindful of LLM content filters — avoid putting raw security payloads in the main SKILL.md; use references/ files instead
 
 ## License
 

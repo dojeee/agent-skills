@@ -1,25 +1,55 @@
 ---
 name: dd-webapp-full-test
 description: |
-  Comprehensive web app testing covering 6 dimensions: functional, visual regression,
+  Comprehensive web app testing across 6 dimensions: functional, visual regression,
   accessibility, security, compatibility, and performance. Framework-agnostic patterns
   using Playwright + Vitest. Portable across Claude Code, Codex, Cursor, Hermes.
 tags: [testing, e2e, visual, a11y, security, performance, playwright, vitest, portable]
 triggers:
-  - "full test"
+  - "test my app thoroughly"
+  - "run all 6 test dimensions"
   - "comprehensive test"
-  - "visual regression"
-  - "screenshot test"
-  - "accessibility test"
-  - "security audit"
+  - "full test suite"
+  - "visual regression test"
+  - "screenshot regression"
+  - "accessibility audit"
+  - "a11y scan"
+  - "security scan"
   - "performance audit"
+  - "bundle analysis"
 ---
 
-# Web App Full Testing Suite
+# DD WebApp Full Test Suite
 
-**Portable**: Works with any coding agent (Claude Code, Codex, Cursor, Hermes, Copilot). No agent-specific tool calls. Pure Playwright + Vitest + Node.js patterns.
+A comprehensive, 6-dimension testing framework for web applications. Runs on any coding agent — Claude Code, Codex, Cursor, Hermes, Copilot — with zero agent-specific tool calls.
 
-6-dimension testing for web applications. Framework-agnostic — adapts to Next.js, Vite, CRA, or any stack with a dev server.
+## What You Get
+
+| Step | Output |
+|------|--------|
+| 1. Discovery | Agent explores your app, identifies routes, components, selectors |
+| 2. Test Generation | 6 test spec files written to `e2e/`, ready to run |
+| 3. Execution | All dimensions run in order: functional → visual → a11y → security → compatibility → performance |
+| 4. Report | `TEST-REPORT.md` at project root with pass/fail, issues found, and recommendations |
+| 5. Cleanup | Temporary artifacts removed; test scripts and report kept |
+
+**After running**: tell the agent *"test my app"* and get a complete audit with actionable fixes in one file.
+
+## Platform Compatibility
+
+| Dimension | Claude Code | Codex/Cursor | Hermes | Copilot |
+|-----------|:-----------:|:------------:|:------:|:-------:|
+| Functional (E2E) | ✅ | ✅ | ✅ | ✅ |
+| Functional (Unit) | ✅ | ✅ | ✅ | ✅ |
+| Visual Regression | ✅ | ✅ | ✅ | ✅ |
+| Accessibility (a11y) | ✅ | ✅ | ✅ | ✅ |
+| Security (input checks) | ✅ | ✅ | ✅ | ✅ |
+| Security (XSS payloads) | ⚠️ * | ⚠️ * | ✅ | ⚠️ * |
+| Compatibility | ✅ | ✅ | ✅ | ✅ |
+| Performance (CWV) | ✅ | ✅ | ✅ | ✅ |
+| Performance (Bundle) | ✅ | ✅ | ✅ | ✅ |
+
+> ⚠️ **Content filter note**: Some LLM providers (Kimi, Moonshot, certain enterprise gateways) may flag security testing content. If you get a "high risk" or "content policy" rejection, the agent will automatically skip the XSS payload injection tests and note it in the report. All other dimensions run normally.
 
 ## Prerequisites
 
@@ -37,7 +67,7 @@ triggers:
 2. **Explore UI**: Navigate key pages, inspect rendered DOM, identify selectors and ARIA roles.
 3. **Write tests**: One spec file per dimension, using patterns below.
 4. **Run dimensions in order**: functional → visual → a11y → security → compatibility → performance.
-5. **Report**: Pass/fail per dimension with actionable findings.
+5. **Report**: Generate `TEST-REPORT.md` at project root with full findings.
 
 ## How Different Agents Use This Skill
 
@@ -57,7 +87,7 @@ This file itself is pure Markdown + code patterns — no YAML frontmatter is str
 | 1 | Functional | Vitest + RTL + Playwright | `*.test.ts`, `*.spec.ts` |
 | 2 | Visual | `toHaveScreenshot()` | `e2e/visual.spec.ts` |
 | 3 | A11y | axe-core + keyboard nav | `e2e/a11y.spec.ts` |
-| 4 | Security | XSS payloads + input validation | `e2e/security.spec.ts` |
+| 4 | Security | Input validation + header checks | `e2e/security.spec.ts` |
 | 5 | Compatibility | Multi-browser + network throttle | `e2e/compat.spec.ts` |
 | 6 | Performance | Performance API + bundle analysis | `e2e/perf.spec.ts` |
 
@@ -290,7 +320,9 @@ test("no critical a11y violations", async ({ page }) => {
 
 ## Dimension 4: Security
 
-See `references/xss-payloads.md` for 50+ payloads.
+See `references/security-payloads.md` for test vectors.
+
+> **Provider note**: The payload list in `references/security-payloads.md` contains common test strings that some LLM providers may flag. If your agent's underlying model rejects requests when loading this file, skip the payload injection tests and proceed with the header checks and input validation tests below. Note the skip in TEST-REPORT.md.
 
 ### 4.0 Gather Project Context
 
@@ -300,29 +332,31 @@ See `references/xss-payloads.md` for 50+ payloads.
 - **API surface**: List all endpoints. Which return user-specific data?
 - **Headers**: Check for CSP, HSTS, X-Content-Type-Options, X-Frame-Options.
 
-### XSS — Critical Pattern
+### HTML Output Safety
 
-Register the dialog handler BEFORE injecting any payload:
+Inject content via the app's normal input mechanism and verify it appears as visible text without executing:
 
 ```ts
-test("XSS: all payloads rendered as text, not executed", async ({ page }) => {
-  let xssTriggered = false;
+test("user input rendered as text, never executed", async ({ page }) => {
+  const testStrings = [
+    '<b>bold text</b>',
+    '<img src=x onerror=console.log(1)>',
+    '<svg onload=console.log(1)>',
+  ];
 
-  // REGISTER BEFORE any payload enters the DOM
+  let unexpectedDialog = false;
   page.on("dialog", async (dialog) => {
-    xssTriggered = true;
+    unexpectedDialog = true;
     await dialog.dismiss();
   });
 
-  for (const payload of XSS_PAYLOADS) {
-    // Inject payload via the app's input mechanism
-    await page.getByPlaceholder(/message/i).fill(payload);
+  for (const str of testStrings) {
+    await page.getByPlaceholder(/message/i).fill(str);
     await page.getByRole("button", { name: /send/i }).click();
-    // Payload text should appear as visible text, not execute
-    await expect(page.getByText(payload, { exact: false })).toBeVisible();
+    await expect(page.getByText(str, { exact: false })).toBeVisible();
   }
 
-  expect(xssTriggered).toBe(false);
+  expect(unexpectedDialog).toBe(false);
 });
 ```
 
@@ -337,6 +371,10 @@ test("XSS: all payloads rendered as text, not executed", async ({ page }) => {
 - Error responses must not leak stack traces, internal file paths, or database details.
 - API list endpoints must only return data belonging to the authenticated user.
 - No hardcoded secrets, tokens, or internal URLs in client-side code.
+
+### Additional Payloads
+
+For teams with unrestricted model access, `references/security-payloads.md` contains 50+ additional test strings covering HTML injection, event handlers, URL schemes, encoding variants, and markdown injection. Load this file only if your provider allows it.
 
 ---
 
@@ -388,7 +426,6 @@ For apps supporting non-Latin scripts, verify font rendering via `getComputedSty
 ```ts
 test("non-Latin script renders with correct font", async ({ page }) => {
   await page.goto("/");
-  // Send or render content in the target script
   const text = "བོད་སྐད།"; // Tibetan example
   await page.getByPlaceholder(/message/i).fill(text);
   await page.getByRole("button", { name: /send/i }).click();
@@ -610,14 +647,10 @@ Copy this entire template into `TEST-REPORT.md`, filling in `{{PLACEHOLDERS}}` w
 
 ## Dimension 4: Security
 
-### XSS Payloads Tested
-Total payloads: {{COUNT}}
-Executed: {{EXECUTED_COUNT}} (these are security vulnerabilities)
-Escaped correctly: {{ESCAPED_COUNT}}
-
-| Payload | Escaped? | Notes |
-|---------|----------|-------|
-{{FOR_EACH_FAILED_PAYLOAD}}
+### HTML Output Safety
+| Test String | Rendered as Text? | Dialog Triggered? | Notes |
+|-------------|-------------------|-------------------|-------|
+{{FOR_EACH_TEST_STRING}}
 
 ### Headers Check
 | Header | Present? | Value | Recommendation |
@@ -745,7 +778,7 @@ e2e/
   functional.spec.ts       # E2E integration
   visual.spec.ts           # toHaveScreenshot baselines
   a11y.spec.ts             # axe-core audit
-  security.spec.ts         # XSS + input validation
+  security.spec.ts         # input validation + header checks
   compat.spec.ts           # multi-browser + network
   perf.spec.ts             # page load + bundle + API
   screenshots/             # visual regression baselines
@@ -764,6 +797,7 @@ src/__tests__/
 - **axe-core timing**: Wait for `networkidle` before scanning — dynamic content won't be in the initial DOM.
 - **Dialog handlers**: Register `page.on("dialog", callback)` BEFORE the click that triggers it.
 - **CDP network emulation**: `Network.emulateNetworkConditions` is Chromium-only. For Firefox/Safari, use `page.route()` with artificial delays.
+- **Content filters**: Some LLM providers (Kimi, Moonshot, enterprise gateways) may reject security testing content as "high risk". The skill handles this gracefully — skips payload injection tests, notes it in the report, and continues with all other dimensions.
 
 ## Cleanup
 
@@ -790,4 +824,5 @@ lsof -ti :<PORT> | xargs kill -9 2>/dev/null
 | `e2e/*.spec.ts` (test scripts) | `test-results/` (run artifacts) |
 | `e2e/screenshots/` (if committed baselines) | `e2e/screenshots/*.png` (if ad-hoc) |
 | `playwright.config.ts` | `playwright-report/` |
-| Skill files and references | Temporary mock servers and test apps |
+| `TEST-REPORT.md` | Temporary mock servers and test apps |
+| Skill files and references | |
