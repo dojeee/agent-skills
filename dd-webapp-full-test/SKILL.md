@@ -91,17 +91,9 @@ Read `package.json` and check `dependencies` + `devDependencies`:
 | **SvelteKit** | `svelte.config.js` | `npm run dev` | `.svelte-kit/output/client/*.js` |
 | **None (static HTML)** | `index.html` only | `npx serve -p 3000` | N/A (skip bundle analysis) |
 
-### Step 3: Check Tools & Tell User
+### Step 3: Ask User — Install Missing Tools
 
-After detecting the stack, check what's installed and tell the user what they need:
-
-```bash
-# Check tools
-npx playwright --version 2>/dev/null || echo "MISSING: playwright"
-npx vitest --version 2>/dev/null || echo "MISSING: vitest"
-```
-
-**Example output after pre-flight:**
+After detecting the stack and checking what's installed, **STOP and ask the user** before doing anything:
 
 ```
 === Pre-flight Check ===
@@ -113,16 +105,46 @@ Vitest:          ✅ 4.1.5
 axe-core:        ❌ not installed
 Component lib:   @testing-library/react ✅
 
-Actions needed:
-  npm install -D @axe-core/playwright          # for Dimension 3 (a11y)
+Missing tools: @axe-core/playwright
 
-Dimensions that will SKIP:
-  None — all 6 dimensions will run.
+Affected dimensions if not installed:
+  - Dimension 3 (Accessibility) — requires axe-core
 
-Proceed? (y/n)
+May I install the missing tools?
+  npm install -D @axe-core/playwright
+
+[yes/no]
 ```
 
-### Step 4: Adapt Patterns
+**User's choice determines behavior:**
+
+| User says | Action |
+|-----------|--------|
+| **yes** | Agent runs `npm install -D <packages>` (or equivalent for yarn/pnpm/bun), then proceeds with all dimensions |
+| **no** | Agent skips the affected dimensions entirely. Proceeds with those that have all tools available. |
+
+**CRITICAL RULES:**
+- **Always ask before installing**. Never run `npm install` or modify `package.json` without user confirmation.
+- **If user says no**, do NOT argue or suggest workarounds. Skip the dimension immediately.
+- **Record every skip** for the TEST-REPORT.md (see "Skipped Dimensions" in the report template).
+
+### Step 4: Lock in Dimensions
+
+After the user responds, lock in which dimensions will run. Show the final plan:
+
+```
+=== Test Plan ===
+✅ Dimension 1 — Functional       (Vitest ✅, Playwright ✅)
+✅ Dimension 2 — Visual           (Playwright ✅)
+❌ Dimension 3 — Accessibility    (axe-core not installed, user declined)
+✅ Dimension 4 — Security         (Playwright ✅)
+✅ Dimension 5 — Compatibility    (Playwright ✅)
+✅ Dimension 6 — Performance      (Playwright ✅)
+
+Running 5 of 6 dimensions. Proceeding...
+```
+
+### Step 5: Adapt Patterns
 
 Based on detected framework, use the correct patterns in Dimension 1:
 
@@ -135,7 +157,7 @@ Based on detected framework, use the correct patterns in Dimension 1:
 | Vanilla HTML/JS | Dimension 1 → skip 1.1 & 1.2, use 1.3 (E2E only) |
 | SolidJS | Dimension 1 → "Pattern: SolidJS" |
 
-**Do NOT proceed to Dimension 1 until the user confirms the pre-flight output.**
+**Do NOT proceed to Dimension 1 until Step 4 is complete and dimensions are locked in.**
 
 ---
 
@@ -696,6 +718,20 @@ Copy this entire template into `TEST-REPORT.md`, filling in `{{PLACEHOLDERS}}` w
 | 4 | Security | {{D4_STATUS}} | {{D4_TOTAL}} | {{D4_PASSED}} | {{D4_FAILED}} | {{D4_KEY}} |
 | 5 | Compatibility | {{D5_STATUS}} | {{D5_TOTAL}} | {{D5_PASSED}} | {{D5_FAILED}} | {{D5_KEY}} |
 | 6 | Performance | {{D6_STATUS}} | {{D6_TOTAL}} | {{D6_PASSED}} | {{D6_FAILED}} | {{D6_KEY}} |
+
+### Skipped Dimensions
+
+{{IF_ANY_DIMENSIONS_SKIPPED}}
+| # | Dimension | Reason |
+|---|-----------|--------|
+{{FOR_EACH_SKIPPED}}
+| {{N}} | {{DIMENSION_NAME}} | {{SKIP_REASON}} |
+{{END_FOR}}
+
+> **Note**: These dimensions were skipped because required tools were not installed and the user declined automatic installation. To enable them, install the missing tools and re-run the test.
+{{ELSE}}
+No dimensions were skipped. All 6 dimensions executed.
+{{END_IF}}
 
 ---
 
