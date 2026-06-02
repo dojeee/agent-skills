@@ -1,5 +1,5 @@
 ---
-name: webapp-full-test
+name: dd-webapp-full-test
 description: |
   Comprehensive web app testing covering 6 dimensions: functional, visual regression,
   accessibility, security, compatibility, and performance. Framework-agnostic patterns
