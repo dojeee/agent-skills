@@ -1,5 +1,5 @@
 ---
-name: dd-webapp-full-test
+name: webapp-full-test
 description: |
   Comprehensive web app testing covering 6 dimensions: functional, visual regression,
   accessibility, security, compatibility, and performance. Framework-agnostic patterns
@@ -500,17 +500,243 @@ async function measureApiLatency(page: Page, endpoint: string) {
 
 ---
 
-## Deliverables
+## Test Report
 
-After running all 6 dimensions, produce:
+**CRITICAL**: After ALL 6 dimensions complete, generate a comprehensive Markdown report at the project root: `TEST-REPORT.md`. Then tell the user: *"Testing complete. Full report: `TEST-REPORT.md` in the project root."*
 
-1. **Pass/Fail summary** — one row per dimension
-2. **Screenshot diffs** — visual regression failures as PNG files
-3. **Bundle report** — top 15 chunks, total size, flagged files > 500KB
-4. **API latency table** — endpoint, average ms, status code
-5. **A11y violations** — critical and serious issues from axe-core
-6. **Security findings** — any XSS vectors not escaped, headers missing
-7. **Console errors** — collected via `page.on("pageerror", ...)` across all tests
+### Report Template
+
+Copy this entire template into `TEST-REPORT.md`, filling in `{{PLACEHOLDERS}}` with actual test results:
+
+```markdown
+# Test Report — {{PROJECT_NAME}}
+
+**Date**: {{DATE}}
+**Tested by**: AI Agent ({{AGENT_NAME}})
+**Dimensions tested**: 6/6
+**Overall status**: {{OVERALL_STATUS}} ({{PASSED}}/6 dimensions passing)
+
+---
+
+## Summary
+
+| # | Dimension | Status | Tests Run | Passed | Failed | Key Finding |
+|---|-----------|--------|-----------|--------|--------|-------------|
+| 1 | Functional | {{D1_STATUS}} | {{D1_TOTAL}} | {{D1_PASSED}} | {{D1_FAILED}} | {{D1_KEY}} |
+| 2 | Visual | {{D2_STATUS}} | {{D2_TOTAL}} | {{D2_PASSED}} | {{D2_FAILED}} | {{D2_KEY}} |
+| 3 | Accessibility | {{D3_STATUS}} | {{D3_TOTAL}} | {{D3_PASSED}} | {{D3_FAILED}} | {{D3_KEY}} |
+| 4 | Security | {{D4_STATUS}} | {{D4_TOTAL}} | {{D4_PASSED}} | {{D4_FAILED}} | {{D4_KEY}} |
+| 5 | Compatibility | {{D5_STATUS}} | {{D5_TOTAL}} | {{D5_PASSED}} | {{D5_FAILED}} | {{D5_KEY}} |
+| 6 | Performance | {{D6_STATUS}} | {{D6_TOTAL}} | {{D6_PASSED}} | {{D6_FAILED}} | {{D6_KEY}} |
+
+---
+
+## Dimension 1: Functional Testing
+
+### Unit Tests
+{{UNIT_TEST_TABLE_OR_SUMMARY}}
+
+### Component Tests
+{{COMPONENT_TEST_TABLE_OR_SUMMARY}}
+
+### E2E Flows
+| Test | Status | Notes |
+|------|--------|-------|
+| Auth: unauthenticated redirect | {{PASS/FAIL}} | {{NOTES}} |
+| Auth: valid login | {{PASS/FAIL}} | {{NOTES}} |
+| Auth: invalid credentials | {{PASS/FAIL}} | {{NOTES}} |
+| Create new item | {{PASS/FAIL}} | {{NOTES}} |
+| Send message | {{PASS/FAIL}} | {{NOTES}} |
+| Multi-turn conversation | {{PASS/FAIL}} | {{NOTES}} |
+| Long message (3000+ chars) | {{PASS/FAIL}} | {{NOTES}} |
+| Rename item | {{PASS/FAIL}} | {{NOTES}} |
+| Delete item | {{PASS/FAIL}} | {{NOTES}} |
+| Search/filter | {{PASS/FAIL}} | {{NOTES}} |
+| Sidebar/panel toggle | {{PASS/FAIL}} | {{NOTES}} |
+
+### API Contract
+| Endpoint | Status | Response Shape | Notes |
+|----------|--------|----------------|-------|
+| {{GET /api/items}} | {{PASS/FAIL}} | {{CORRECT/MISSING}} | {{NOTES}} |
+| {{GET /api/items/:id}} | {{PASS/FAIL}} | {{CORRECT/MISSING}} | {{NOTES}} |
+| {{POST /api/items}} | {{PASS/FAIL}} | {{CORRECT/MISSING}} | {{NOTES}} |
+| {{PUT /api/items/:id}} | {{PASS/FAIL}} | {{CORRECT/MISSING}} | {{NOTES}} |
+| {{DELETE /api/items/:id}} | {{PASS/FAIL}} | {{CORRECT/MISSING}} | {{NOTES}} |
+
+### Issues Found
+{{LIST_EACH_ISSUE_WITH_SEVERITY_AND_REPRO_STEPS}}
+
+---
+
+## Dimension 2: Visual Regression
+
+### Screenshots Captured
+| # | Screenshot | Status | Diff |
+|---|-----------|--------|------|
+{{FOR_EACH_SCREENSHOT}}
+
+### Issues Found
+| Screenshot | Issue | Severity | Recommendation |
+|-----------|-------|----------|----------------|
+{{LIST_ISSUES}}
+
+---
+
+## Dimension 3: Accessibility
+
+### axe-core Scan Results
+| Page | Violations (Critical) | Violations (Serious) | Violations (Moderate) |
+|------|----------------------|---------------------|----------------------|
+{{FOR_EACH_PAGE}}
+
+### Violation Details
+{{FOR_EACH_VIOLATION}}
+- **Rule**: {{RULE_ID}}
+- **Impact**: {{IMPACT}}
+- **Element**: {{ELEMENT}}
+- **Description**: {{DESCRIPTION}}
+- **Fix**: {{RECOMMENDATION}}
+{{END_FOR}}
+
+### Keyboard Navigation
+| Scenario | Status | Notes |
+|----------|--------|-------|
+| Tab order on main page | {{PASS/FAIL}} | {{NOTES}} |
+| Dialog focus trap | {{PASS/FAIL}} | {{NOTES}} |
+| Dialog Esc close | {{PASS/FAIL}} | {{NOTES}} |
+| Focus return on close | {{PASS/FAIL}} | {{NOTES}} |
+
+---
+
+## Dimension 4: Security
+
+### XSS Payloads Tested
+Total payloads: {{COUNT}}
+Executed: {{EXECUTED_COUNT}} (these are security vulnerabilities)
+Escaped correctly: {{ESCAPED_COUNT}}
+
+| Payload | Escaped? | Notes |
+|---------|----------|-------|
+{{FOR_EACH_FAILED_PAYLOAD}}
+
+### Headers Check
+| Header | Present? | Value | Recommendation |
+|--------|----------|-------|----------------|
+| Content-Security-Policy | {{YES/NO}} | {{VALUE}} | {{REC}} |
+| X-Content-Type-Options | {{YES/NO}} | {{VALUE}} | {{REC}} |
+| Strict-Transport-Security | {{YES/NO}} | {{VALUE}} | {{REC}} |
+| X-Frame-Options | {{YES/NO}} | {{VALUE}} | {{REC}} |
+| Cache-Control | {{YES/NO}} | {{VALUE}} | {{REC}} |
+
+### Input Validation
+| Test | Result | Notes |
+|------|--------|-------|
+| Empty input → send disabled | {{PASS/FAIL}} | {{NOTES}} |
+| Whitespace-only → disabled | {{PASS/FAIL}} | {{NOTES}} |
+| 100k char input → no crash | {{PASS/FAIL}} | {{NOTES}} |
+
+### Issues Found
+{{LIST_ISSUES_WITH_SEVERITY}}
+
+---
+
+## Dimension 5: Compatibility
+
+### Browser Results
+| Browser | Tests Run | Passed | Failed | Key Issues |
+|---------|-----------|--------|--------|------------|
+| Chromium | {{N}} | {{N}} | {{N}} | {{ISSUES}} |
+| Firefox | {{N}} | {{N}} | {{N}} | {{ISSUES}} |
+| Safari | {{N}} | {{N}} | {{N}} | {{ISSUES}} |
+
+### Network Conditions
+| Scenario | Status | Notes |
+|----------|--------|-------|
+| Offline — error shown | {{PASS/FAIL}} | {{NOTES}} |
+| Slow 3G — streaming OK | {{PASS/FAIL}} | {{NOTES}} |
+
+### Multi-Language Rendering
+| Script | Font Applied Correctly? | Notes |
+|--------|------------------------|-------|
+{{FOR_EACH_SCRIPT}}
+
+---
+
+## Dimension 6: Performance
+
+### Core Web Vitals
+| Page | FCP | LCP | DCL | TTI | Resources | Transfer | Heap |
+|------|-----|-----|-----|-----|-----------|----------|------|
+{{FOR_EACH_PAGE}}
+
+### Bundle Analysis
+Total chunks: {{N}}
+Total size: {{SIZE}}
+Largest chunk: {{NAME}} ({{SIZE}})
+
+| # | Chunk | Size |
+|---|-------|------|
+{{TOP_15}}
+
+**Warnings**: {{LIST_CHUNKS_OVER_500KB}}
+
+### API Latency (avg of 3)
+| Endpoint | Duration | Status |
+|----------|----------|--------|
+{{FOR_EACH_ENDPOINT}}
+
+### Additional Metrics
+| Metric | Value | Threshold | Status |
+|--------|-------|-----------|--------|
+| CLS | {{VALUE}} | < 0.1 | {{PASS/FAIL}} |
+| Long Tasks | {{COUNT}} | 0 | {{PASS/FAIL}} |
+| Cache hit (2nd visit) | {{YES/NO}} | transfer ≈ 0 | {{PASS/FAIL}} |
+| SSE first-token | {{MS}}ms | < 2s | {{PASS/FAIL}} |
+
+---
+
+## Console Errors
+
+{{LIST_ALL_CONSOLE_ERRORS_OR_"No console errors detected across all tests."}}
+
+---
+
+## Recommendations
+
+### Critical (fix before release)
+{{LIST_CRITICAL_ISSUES}}
+
+### Should Fix (fix before next feature)
+{{LIST_SHOULD_FIX_ISSUES}}
+
+### Nice to Have (improve when possible)
+{{LIST_NICE_TO_HAVE}}
+
+---
+
+## Test Artifacts
+
+- Test scripts: `e2e/*.spec.ts`
+- Screenshot baselines: `e2e/screenshots/`
+- Screenshot diffs: `test-results/*/diff.png`
+- Playwright report: `playwright-report/` (if generated)
+
+## Cleanup
+
+```bash
+# Remove run artifacts (keep test scripts)
+rm -rf test-results/ playwright-report/
+```
+```
+
+### Post-Test Instructions
+
+After writing `TEST-REPORT.md`:
+
+1. **Tell the user**: "Testing complete. Full report generated at `TEST-REPORT.md` in the project root."
+2. **Summarize top 3 findings** in the chat response so they don't need to open the file immediately.
+3. **Offer cleanup**: "Run cleanup commands to remove test artifacts? (test-results/, screenshots/)"
+4. **Do NOT delete** `TEST-REPORT.md` during cleanup — it's the permanent record.
 
 ## File Structure Created
 
