@@ -1,12 +1,12 @@
-# Agent Skills Repository
+# DD Agent Skills
 
-A collection of portable, agent-agnostic skills for AI coding assistants.
+A collection of portable, agent-agnostic skills for AI coding assistants. All skills use the `dd-` prefix convention.
 
 Each skill is a self-contained Markdown file with patterns, checklists, and executable code templates. Designed to work with **Claude Code**, **Codex**, **Cursor**, **Hermes**, and **GitHub Copilot** — no agent-specific tool calls.
 
 ## Available Skills
 
-### `webapp-full-test`
+### `dd-webapp-full-test`
 
 Comprehensive web application testing across 6 dimensions:
 
@@ -21,9 +21,19 @@ Comprehensive web application testing across 6 dimensions:
 
 **Stack**: Playwright + Vitest + React Testing Library + axe-core. Framework-agnostic — adapts to Next.js, Vite, CRA, or any web app with a dev server.
 
-**Files**: [`webapp-full-test/SKILL.md`](webapp-full-test/SKILL.md) + 4 reference checklists.
+**Files**: [`dd-webapp-full-test/SKILL.md`](dd-webapp-full-test/SKILL.md) + 4 reference checklists.
 
 ---
+
+## Naming Convention
+
+All skills use the `dd-` prefix:
+
+```
+dd-<skill-name>/
+├── SKILL.md
+└── references/
+```
 
 ## How Skills Work
 
@@ -32,7 +42,7 @@ Each skill is a standalone `.md` file that coding agents read as instructions. W
 **Structure of a skill:**
 
 ```
-skill-name/
+dd-skill-name/
 ├── SKILL.md              # Main instructions: patterns, code templates, pitfalls
 └── references/           # Detailed checklists, payload lists, metric definitions
     ├── checklist.md
@@ -52,17 +62,17 @@ skill-name/
 
 ```bash
 # Per-project
-cp -r webapp-full-test ~/my-project/.claude/skills/
+cp -r dd-webapp-full-test ~/my-project/.claude/skills/
 
 # Or reference from CLAUDE.md:
-# "For comprehensive testing, load .claude/skills/webapp-full-test/SKILL.md"
+# "For comprehensive testing, load .claude/skills/dd-webapp-full-test/SKILL.md"
 ```
 
 ### With Hermes
 
 ```bash
 # Per-user
-cp -r webapp-full-test ~/.hermes/skills/
+cp -r dd-webapp-full-test ~/.hermes/skills/
 
 # Auto-triggered when user mentions "full test", "visual regression", etc.
 ```
@@ -71,14 +81,14 @@ cp -r webapp-full-test ~/.hermes/skills/
 
 Since skills use standard code patterns (Playwright, Vitest), any agent can execute them directly. Just tell the agent:
 
-> "Test this app comprehensively using the patterns in `webapp-full-test/SKILL.md`"
+> "Test this app comprehensively using the patterns in `dd-webapp-full-test/SKILL.md`"
 
 ## Contributing
 
-Skills follow a `SKILL.md` + `references/` structure:
+Skills follow a `dd-SKILL.md` + `references/` structure:
 
 ```
-your-skill-name/
+dd-your-skill/
 ├── SKILL.md              # Required: main skill file with patterns and instructions
 └── references/           # Optional: detailed lists, tables, payload collections
     ├── checklist.md
@@ -86,6 +96,7 @@ your-skill-name/
 ```
 
 Guidelines:
+- Prefix with `dd-`
 - Pure English (code examples may contain non-English content for testing purposes)
 - No agent-specific tool calls (`browser_snapshot`, `skill_view`, etc.)
 - Code templates should be copy-paste ready
