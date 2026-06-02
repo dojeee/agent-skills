@@ -27,13 +27,44 @@ A comprehensive, 6-dimension testing framework for web applications. Runs on any
 
 | Step | Output |
 |------|--------|
-| 1. Discovery | Agent explores your app, identifies routes, components, selectors |
-| 2. Test Generation | 6 test spec files written to `e2e/`, ready to run |
-| 3. Execution | All dimensions run in order: functional → visual → a11y → security → compatibility → performance |
-| 4. Report | `TEST-REPORT.md` at project root with pass/fail, issues found, and recommendations |
-| 5. Cleanup | Temporary artifacts removed; test scripts and report kept |
+| 1. Pre-flight | Detects framework, build tool, installed tools, missing deps |
+| 2. Lock dimensions | User confirms which 6 dimensions run, which skip |
+| 3. Execution plan | Detailed per-dimension plan — exactly what gets tested, user approves before execution |
+| 4. Execute | All dimensions run in order: functional → visual → a11y → security → compatibility → performance |
+| 5. Report | `TEST-REPORT.md` at project root with pass/fail, issues found, and recommendations |
+| 6. Cleanup | Temporary artifacts removed; test scripts and report kept |
 
 **After running**: tell the agent *"test my app"* and get a complete audit with actionable fixes in one file.
+
+## CRITICAL RULES (agent MUST follow)
+
+### Rule 1: NEVER modify business code
+
+This skill **only tests**. It never changes application logic, components, config, styles, or any file outside `e2e/` and `TEST-REPORT.md`.
+
+- ✅ Write test files → `e2e/*.spec.ts`
+- ✅ Write report → `TEST-REPORT.md`
+- ✅ Install test dependencies → `npm install -D <test-tool>` (with user approval only)
+- ❌ Fix a bug found during testing
+- ❌ Change business logic, components, routes, styles, config
+- ❌ Refactor code to make it "more testable"
+- ❌ Modify `package.json` scripts, `tsconfig.json`, or build config
+
+**All issues go into the report.** The user decides what to fix and how.
+
+### Rule 2: Test results are facts, not judgments
+
+Report what the tests found. Do not decide whether something is "acceptable". Use:
+
+- `PASS` — test assertion passed
+- `FAIL` — test assertion failed, include the actual vs expected
+- `SKIP` — couldn't run (missing tool, blocked by content filter, etc.)
+
+Never write "this is fine" or "this is probably okay" — either the test passed or it didn't.
+
+### Rule 3: Ask before installing anything
+
+Never run `npm install` without explicit user confirmation. Show what will be installed, which dimensions it affects, and wait for yes/no.
 
 ## Platform Compatibility
 
@@ -63,11 +94,38 @@ A comprehensive, 6-dimension testing framework for web applications. Runs on any
 
 ## Pre-flight Check (CRITICAL — run first)
 
-Before writing ANY test code, the agent MUST execute this check. It detects the project stack and adapts all subsequent patterns.
+Before writing ANY test code, the agent MUST run a pre-flight script to detect the project stack. Three scripts are provided — try them in fallback order:
 
-### Step 1: Detect Framework
+```bash
+# Try each in order. Use the first one that outputs valid JSON.
+node scripts/preflight.mjs          # Requires Node.js (ALWAYS available)
+python3 scripts/preflight.py        # Fallback: Python 3
+bash scripts/preflight.sh           # Fallback: Unix shell
+```
 
-Read `package.json` and check `dependencies` + `devDependencies`:
+The script outputs JSON:
+
+```json
+{
+  "framework": "next.js",
+  "buildTool": "next.js",
+  "devServerPort": "3000",
+  "devServerRunning": true,
+  "tools": {
+    "playwright": "1.59.1",
+    "vitest": "4.1.5",
+    "jest": null,
+    "axe": false
+  },
+  "componentLib": "@testing-library/react",
+  "missingTools": ["@axe-core/playwright"],
+  "runner": "node"
+}
+```
+
+### Framework Detection Reference
+
+The script detects these frameworks. If running manually, use this table:
 
 | Framework | Detection Signal | Component Testing Tool | Unit Test Tool |
 |-----------|-----------------|----------------------|----------------|
@@ -80,7 +138,9 @@ Read `package.json` and check `dependencies` + `devDependencies`:
 | **Vanilla HTML/JS** | no framework dep | SKIP component tests | SKIP unit tests (or use `vitest` for utils) |
 | **SolidJS** | `solid-js` | `@solidjs/testing-library` | `vitest` |
 
-### Step 2: Detect Build Tool
+### Build Tool Detection Reference
+
+The script auto-detects. Manual reference:
 
 | Build Tool | Config File | Dev Command | Bundle Path |
 |-----------|-------------|-------------|-------------|
@@ -91,9 +151,9 @@ Read `package.json` and check `dependencies` + `devDependencies`:
 | **SvelteKit** | `svelte.config.js` | `npm run dev` | `.svelte-kit/output/client/*.js` |
 | **None (static HTML)** | `index.html` only | `npx serve -p 3000` | N/A (skip bundle analysis) |
 
-### Step 3: Ask User — Install Missing Tools
+### Step 1: Ask User — Install Missing Tools
 
-After detecting the stack and checking what's installed, **STOP and ask the user** before doing anything:
+Parse the script's `missingTools` array. Build and show the pre-flight report, then **STOP and ask** before doing anything:
 
 ```
 === Pre-flight Check ===
@@ -128,7 +188,7 @@ May I install the missing tools?
 - **If user says no**, do NOT argue or suggest workarounds. Skip the dimension immediately.
 - **Record every skip** for the TEST-REPORT.md (see "Skipped Dimensions" in the report template).
 
-### Step 4: Lock in Dimensions
+### Step 2: Lock in Dimensions
 
 After the user responds, lock in which dimensions will run. Show the final plan:
 
@@ -143,6 +203,68 @@ After the user responds, lock in which dimensions will run. Show the final plan:
 
 Running 5 of 6 dimensions. Proceeding...
 ```
+
+### Step 3: Create Execution Plan
+
+Before writing any code, create a detailed plan listing exactly what will be tested in each dimension. This ensures thorough coverage and lets the user see what's coming.
+
+Output the plan in this format:
+
+```
+=== Execution Plan ===
+Project:  <framework + build tool>
+Dev server: <port> (<status>)
+
+Dimension 1 — Functional (Vitest + Playwright)
+  Unit tests:        <N> tests covering <areas>
+  Component tests:   <N> tests for <components>
+  E2E flows:         <N> scenarios: <list>
+  API contract:      <N> endpoints: <list>
+
+Dimension 2 — Visual (Playwright screenshots)
+  Screenshots:       <N> scenarios: <list key ones>
+  Viewports:         mobile (375px), tablet (768px), desktop (1440px)
+  Themes:            <light | light+dark>
+
+Dimension 3 — Accessibility (axe-core + keyboard)
+  Pages scanned:     <N> pages: <list>
+  Keyboard checks:   tab order, focus trap, escape close
+
+Dimension 4 — Security (Playwright)
+  Payload tests:     <N> vectors from references/security-payloads.md
+  Header checks:     CSP, HSTS, X-Content-Type-Options, X-Frame-Options
+  Input validation:  empty, whitespace, 100k chars
+
+Dimension 5 — Compatibility (Playwright)
+  Browsers:          <chromium | chromium+firefox+safari>
+  Network:           offline, slow 3G
+  Scripts:           <Latin, CJK, Tibetan, Arabic, etc.>
+
+Dimension 6 — Performance (Playwright + fs)
+  Pages measured:    <N> pages: <list>
+  Bundle analysis:   <build output path>
+  API latency:       <N> endpoints: <list>
+
+Total: <N> tests across <M> dimensions
+Estimated: <time>
+```
+
+**Rules for the plan:**
+- Base every number on what was actually discovered — don't guess.
+- If a dimension is skipped (user declined tool install), mark it `SKIPPED: <reason>`.
+- Show the plan to the user. Ask: *"Proceed with this plan?"*
+- Only begin execution after the user confirms.
+
+### Step 4: Execute Dimension by Dimension
+
+Execute dimensions in order: 1 → 2 → 3 → 4 → 5 → 6. After each dimension completes:
+
+1. **Report progress**: brief summary of passes/failures for that dimension.
+2. **Do NOT stop** on individual test failures — record them and continue.
+3. **Move to next dimension** immediately — no need to re-ask the user.
+4. **If a dimension is skipped**: note it and move on.
+
+After all dimensions: generate `TEST-REPORT.md` (see Report Template section).
 
 ### Step 5: Adapt Patterns
 
@@ -163,11 +285,11 @@ Based on detected framework, use the correct patterns in Dimension 1:
 
 ## Quick Start
 
-1. **Run Pre-flight Check** (above) — detects framework, checks tools, tells user what to install.
-2. **Explore UI**: Navigate key pages, inspect rendered DOM, identify selectors and ARIA roles.
-3. **Write tests**: One spec file per dimension, using framework-adapted patterns below.
-4. **Run dimensions in order**: functional → visual → a11y → security → compatibility → performance.
-5. **Report**: Generate `TEST-REPORT.md` at project root with full findings.
+1. **Run Pre-flight Check** — detects framework, checks tools, tells user what to install.
+2. **Lock in dimensions** — user confirms which 6 run, which skip.
+3. **Create execution plan** — detailed per-dimension plan, user confirms before execution.
+4. **Execute dimension by dimension** — functional → visual → a11y → security → compatibility → performance.
+5. **Report** — generate `TEST-REPORT.md` at project root with full findings.
 
 ## How Different Agents Use This Skill
 
@@ -302,6 +424,20 @@ describe("MessageBubble", () => {
 #### Pattern: Vanilla HTML/JS
 
 **Skip component tests.** Use Dimension 1.3 (E2E) exclusively. Unit-test utility functions if they exist.
+
+#### Pattern: SolidJS
+
+```ts
+import { render, screen } from "@solidjs/testing-library";
+import MessageBubble from "./MessageBubble";
+
+describe("MessageBubble", () => {
+  it("renders user message", () => {
+    render(() => <MessageBubble role="user" content="hello" />);
+    expect(screen.getByText("hello")).toBeTruthy();
+  });
+});
+```
 
 Key components to test (framework-dependent): message bubbles, sidebar/list items, search dialog, settings panels, error states, loading skeletons.
 
@@ -970,7 +1106,7 @@ e2e/
 - **axe-core timing**: Wait for `networkidle` before scanning — dynamic content won't be in the initial DOM.
 - **Dialog handlers**: Register `page.on("dialog", callback)` BEFORE the click that triggers it.
 - **CDP network emulation**: `Network.emulateNetworkConditions` is Chromium-only. For Firefox/Safari, use `page.route()` with artificial delays.
-- **Content filters**: Some LLM providers (Kimi, Moonshot, enterprise gateways) may reject security testing content as "high risk". The skill handles this gracefully — skips payload injection tests, notes it in the report, and continues with all other dimensions.
+- **Content filters**: Some LLM providers or enterprise gateways may reject security testing content. The skill handles this gracefully — skips payload injection tests, notes it in the report, and continues with all other dimensions.
 - **Framework detection**: Always run the Pre-flight Check first. The skill adapts patterns for React, Vue, Angular, Svelte, and vanilla HTML. Never assume React.
 - **Component test tools**: Each framework has different testing tools. Use `@testing-library/react` for React, `@vue/test-utils` for Vue, `TestBed` for Angular, `@testing-library/svelte` for Svelte.
 
@@ -1001,3 +1137,35 @@ lsof -ti :<PORT> | xargs kill -9 2>/dev/null
 | `playwright.config.ts` | `playwright-report/` |
 | `TEST-REPORT.md` | Temporary mock servers and test apps |
 | Skill files and references | |
+
+## After Installation — Update Project Instructions
+
+After the skill is installed in the project, ask the user:
+
+> This skill is installed. Should I add a reference to it in your project's instruction file so other agents (Claude Code, Codex, Cursor) know about it?
+
+Options:
+
+| File | Purpose | Best for |
+|------|---------|----------|
+| `CLAUDE.md` | Claude Code reads this on session start | Projects using Claude Code |
+| `AGENTS.md` | Codex, Cursor, and Copilot read this | Multi-agent projects |
+| User's custom `.md` | Any user-specified instruction file | Custom setups |
+
+**If the user picks one**, append to that file:
+
+```markdown
+## Testing
+
+Run comprehensive tests with the dd-webapp-full-test skill:
+
+- "test my app thoroughly" — runs 6-dimension audit (functional, visual, a11y, security, compatibility, performance)
+- "run all 6 test dimensions" — same
+- "comprehensive test" — same
+- "security scan" — dimension 4 only
+
+Skill location: `.claude/skills/dd-webapp-full-test/SKILL.md` (or your agent's skill directory).
+Tests are written to `e2e/`. Results in `TEST-REPORT.md`.
+```
+
+**If the user says no**, skip this step. Never modify project files without asking.

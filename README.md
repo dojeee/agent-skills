@@ -12,11 +12,12 @@ Comprehensive web application testing across 6 dimensions. Tell your agent *"tes
 
 | Step | Output |
 |------|--------|
-| 1. Discovery | Agent explores your app, identifies routes, components, selectors |
-| 2. Test Generation | 6 test spec files written to `e2e/` |
-| 3. Execution | All 6 dimensions run in order |
-| 4. Report | `TEST-REPORT.md` at project root with pass/fail, issues, recommendations |
-| 5. Cleanup | Temporary artifacts removed; scripts + report kept |
+| 1. Pre-flight | Detects framework, build tool, installed tools, missing deps |
+| 2. Lock dimensions | User confirms which 6 dimensions run, which skip |
+| 3. Execution plan | Detailed per-dimension plan — exactly what gets tested, user approves |
+| 4. Execute | All dimensions run in order: functional → visual → a11y → security → compatibility → performance |
+| 5. Report | `TEST-REPORT.md` at project root with pass/fail, issues, recommendations |
+| 6. Cleanup | Temporary artifacts removed; scripts + report kept |
 
 | # | Dimension | What it tests |
 |---|-----------|---------------|
@@ -27,11 +28,35 @@ Comprehensive web application testing across 6 dimensions. Tell your agent *"tes
 | 5 | **Compatibility** | Multi-browser, offline/slow network, multi-language rendering |
 | 6 | **Performance** | Core Web Vitals, bundle analysis, API latency, CLS, Long Tasks, cache |
 
-> ⚠️ **Provider note**: Some LLM providers (Kimi, Moonshot, enterprise gateways) may flag security test content. The skill handles this gracefully — skips affected tests, notes it in the report, and continues normally.
+> **Provider note**: Some LLM providers or enterprise gateways may flag security test content. The skill handles this gracefully — skips affected tests, notes it in the report, and continues normally.
 
 **Stack**: Playwright + Vitest + React Testing Library + axe-core.
 
-**Files**: [`dd-webapp-full-test/SKILL.md`](dd-webapp-full-test/SKILL.md) + 4 reference checklists.
+**Files**: [`dd-webapp-full-test/SKILL.md`](dd-webapp-full-test/SKILL.md) + 3 pre-flight scripts + 4 reference checklists.
+
+### Critical Rules (agent-enforced)
+
+The skill instructs agents to follow three hard rules:
+
+1. **Never modify business code** — write tests to `e2e/`, write results to `TEST-REPORT.md`. Never touch application logic, components, styles, or config. All issues go into the report; the user decides what to fix.
+2. **Test results are facts** — `PASS`, `FAIL`, or `SKIP` only. No "this is fine" judgments.
+3. **Ask before installing** — never `npm install` without explicit user confirmation.
+
+### Pre-flight Scripts
+
+Three fallback scripts auto-detect your stack. Agent tries each in order:
+
+| Script | Runtime | When |
+|--------|---------|------|
+| `scripts/preflight.mjs` | Node.js | Always works (Playwright needs Node) |
+| `scripts/preflight.py` | Python 3 | Fallback |
+| `scripts/preflight.sh` | Bash | Unix/macOS fallback (timeout-safe) |
+
+Output: JSON with framework, build tool, installed tools, missing dependencies.
+
+### Supported Frameworks
+
+Auto-detected and pattern-adapted: React, Next.js, Vue 2/3, Angular, Svelte, SolidJS, Vanilla HTML/JS.
 
 ---
 
@@ -92,12 +117,20 @@ cat .claude/skills/dd-webapp-full-test/SKILL.md | head -6
 
 ### Post-Install — Reference in Project Config
 
-```markdown
-# CLAUDE.md or AGENTS.md
+After installing, the agent will ask whether to add a reference to `CLAUDE.md` or `AGENTS.md`. If accepted, it appends:
 
+```markdown
 ## Testing
-For comprehensive testing (6 dimensions: functional, visual, a11y, security,
-compatibility, performance), load `.claude/skills/dd-webapp-full-test/SKILL.md`.
+
+Run comprehensive tests with the dd-webapp-full-test skill:
+
+- "test my app thoroughly" — runs 6-dimension audit (functional, visual, a11y, security, compatibility, performance)
+- "run all 6 test dimensions" — same
+- "comprehensive test" — same
+- "security scan" — dimension 4 only
+
+Skill location: `.claude/skills/dd-webapp-full-test/SKILL.md` (or your agent's skill directory).
+Tests are written to `e2e/`. Results in `TEST-REPORT.md`.
 ```
 
 ## Naming Convention
@@ -107,6 +140,7 @@ All skills use the `dd-` prefix:
 ```
 dd-<skill-name>/
 ├── SKILL.md              # Main instructions: patterns, code templates, pitfalls
+├── scripts/              # Pre-flight checks, helpers
 └── references/           # Detailed checklists, payload lists, metric definitions
 ```
 
@@ -117,6 +151,7 @@ Guidelines:
 - Pure English (code examples may contain non-English content for testing)
 - No agent-specific tool calls
 - Include a "Pitfalls" section with common mistakes
+- Include a "CRITICAL RULES" section that forbids agents from modifying business code
 - Test your skill against a deliberately buggy app to verify it catches issues
 - Be mindful of LLM content filters — avoid putting raw security payloads in the main SKILL.md; use references/ files instead
 
