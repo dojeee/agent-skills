@@ -56,32 +56,91 @@ dd-skill-name/
 - **Complete**: Covers the happy path AND edge cases, pitfalls, and cleanup.
 - **Self-contained**: All context needed is in the skill file (or its references).
 
-## Usage
+## Installation
 
-### With Claude Code
+Each skill follows the same install pattern. An AI agent given this repo URL + a skill name should:
+
+1. Clone or download the repo
+2. Copy the skill directory to the agent-specific location
+3. Verify the `SKILL.md` + `references/` are in place
+
+### Agent-Specific Install Paths
+
+| Agent | Skills Directory | Discovery |
+|-------|-----------------|-----------|
+| **Claude Code** | `<project>/.claude/skills/` | Referenced from `CLAUDE.md` or loaded automatically |
+| **Hermes** | `~/.hermes/skills/` | Auto-discovered by frontmatter `triggers` |
+| **Codex / Cursor** | `<project>/.codex/skills/` | Referenced from `AGENTS.md` |
+| **GitHub Copilot** | `<project>/.github/copilot/` | Referenced from `.github/copilot-instructions.md` |
+
+### Install via Agent
+
+Tell your agent:
+
+> "Install `dd-webapp-full-test` from https://github.com/dojeee/agent-skills"
+
+The agent should execute:
 
 ```bash
-# Per-project
-cp -r dd-webapp-full-test ~/my-project/.claude/skills/
+# Clone the repo
+git clone https://github.com/dojeee/agent-skills /tmp/agent-skills
 
-# Or reference from CLAUDE.md:
-# "For comprehensive testing, load .claude/skills/dd-webapp-full-test/SKILL.md"
+# Copy to the correct location for YOUR agent:
+# Claude Code (per-project):
+mkdir -p .claude/skills
+cp -r /tmp/agent-skills/dd-webapp-full-test .claude/skills/
+
+# Hermes (per-user):
+mkdir -p ~/.hermes/skills
+cp -r /tmp/agent-skills/dd-webapp-full-test ~/.hermes/skills/
+
+# Codex / Cursor (per-project):
+mkdir -p .codex/skills
+cp -r /tmp/agent-skills/dd-webapp-full-test .codex/skills/
+
+# Verify
+ls .claude/skills/dd-webapp-full-test/SKILL.md  # or your agent's path
+ls .claude/skills/dd-webapp-full-test/references/
+
+# Cleanup
+rm -rf /tmp/agent-skills
 ```
 
-### With Hermes
+### Install a Single Skill Manually
 
 ```bash
-# Per-user
-cp -r dd-webapp-full-test ~/.hermes/skills/
+# From the repo root
+AGENT_SKILLS_DIR=".claude/skills"  # change to your agent's path
+SKILL="dd-webapp-full-test"
 
-# Auto-triggered when user mentions "full test", "visual regression", etc.
+mkdir -p "$AGENT_SKILLS_DIR"
+cp -r "$SKILL" "$AGENT_SKILLS_DIR/"
+echo "Installed $SKILL → $AGENT_SKILLS_DIR/$SKILL/"
 ```
 
-### With Any Agent
+### Verify Installation
 
-Since skills use standard code patterns (Playwright, Vitest), any agent can execute them directly. Just tell the agent:
+```bash
+# Check the skill file exists
+cat .claude/skills/dd-webapp-full-test/SKILL.md | head -5
 
-> "Test this app comprehensively using the patterns in `dd-webapp-full-test/SKILL.md`"
+# Should show:
+# ---
+# name: dd-webapp-full-test
+# description: |
+#   Comprehensive web app testing covering 6 dimensions...
+```
+
+### After Install — Reference in Project Config
+
+Add to `CLAUDE.md` (Claude Code) or `AGENTS.md` (Codex):
+
+```markdown
+## Testing
+
+For comprehensive testing, load `.claude/skills/dd-webapp-full-test/SKILL.md`.
+Covers: functional, visual regression, accessibility, security, compatibility, performance.
+```
 
 ## Contributing
 
