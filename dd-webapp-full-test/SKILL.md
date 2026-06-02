@@ -231,7 +231,7 @@ Dimension 3 — Accessibility (axe-core + keyboard)
   Keyboard checks:   tab order, focus trap, escape close
 
 Dimension 4 — Security (Playwright)
-  Payload tests:     <N> vectors from references/security-payloads.md
+  Payload tests:     <N> vectors from data/security-payloads.md
   Header checks:     CSP, HSTS, X-Content-Type-Options, X-Frame-Options
   Input validation:  empty, whitespace, 100k chars
 
@@ -609,9 +609,9 @@ test("no critical a11y violations", async ({ page }) => {
 
 ## Dimension 4: Security
 
-See `references/security-payloads.md` for test vectors.
+See `data/security-payloads.md` for test vectors.
 
-> **Provider note**: The payload list in `references/security-payloads.md` contains common test strings that some LLM providers may flag. If your agent's underlying model rejects requests when loading this file, skip the payload injection tests and proceed with the header checks and input validation tests below. Note the skip in TEST-REPORT.md.
+> **Provider note**: The payload list in `data/security-payloads.md` contains common test strings that some LLM providers may flag. If your agent's underlying model rejects requests when loading this file, skip the payload injection tests and proceed with the header checks and input validation tests below. Note the skip in TEST-REPORT.md.
 
 ### 4.0 Gather Project Context
 
@@ -623,11 +623,11 @@ See `references/security-payloads.md` for test vectors.
 
 ### HTML Output Safety
 
-Inject content via the app's normal input mechanism and verify it appears as visible text without executing. The code below uses safe placeholder strings. For a comprehensive set of test vectors, load `references/security-payloads.md` separately when running this dimension.
+Inject content via the app's normal input mechanism and verify it appears as visible text without executing. The code below uses safe placeholder strings. For a comprehensive set of test vectors, load `data/security-payloads.md` separately when running this dimension.
 
 ```ts
 test("user input rendered as text, never executed", async ({ page }) => {
-  // Load specific test strings from references/security-payloads.md
+  // Load specific test strings from data/security-payloads.md
   // when running this dimension. These are safe placeholder examples:
   const testStrings = [
     "<b>bold text</b>",
@@ -665,7 +665,7 @@ test("user input rendered as text, never executed", async ({ page }) => {
 
 ### Additional Payloads
 
-For teams with unrestricted model access, `references/security-payloads.md` contains 50+ additional test strings covering HTML injection, event handlers, URL schemes, encoding variants, and markdown injection. Load this file only if your provider allows it.
+For teams with unrestricted model access, `data/security-payloads.md` contains 50+ additional test strings covering HTML injection, event handlers, URL schemes, encoding variants, and markdown injection. Load this file only if your provider allows it.
 
 ---
 

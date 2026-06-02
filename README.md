@@ -153,7 +153,7 @@ Guidelines:
 - Include a "Pitfalls" section with common mistakes
 - Include a "CRITICAL RULES" section that forbids agents from modifying business code
 - Test your skill against a deliberately buggy app to verify it catches issues
-- Be mindful of LLM content filters — avoid putting raw security payloads in the main SKILL.md; use references/ files instead
+- Be mindful of LLM content filters — avoid putting raw security payloads in the main SKILL.md; use separate data/ files instead (not auto-loaded by agents)
 
 ## License
 
