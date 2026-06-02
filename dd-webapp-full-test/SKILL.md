@@ -61,11 +61,89 @@ A comprehensive, 6-dimension testing framework for web applications. Runs on any
 | Dev server running | `curl localhost:<port>` | Start per project README/CLAUDE.md |
 | Backend (if needed) | `curl localhost:<port>/health` | Start backend service |
 
+## Pre-flight Check (CRITICAL — run first)
+
+Before writing ANY test code, the agent MUST execute this check. It detects the project stack and adapts all subsequent patterns.
+
+### Step 1: Detect Framework
+
+Read `package.json` and check `dependencies` + `devDependencies`:
+
+| Framework | Detection Signal | Component Testing Tool | Unit Test Tool |
+|-----------|-----------------|----------------------|----------------|
+| **React** | `react`, `react-dom` | `@testing-library/react` | `vitest` or `jest` |
+| **Next.js** | `next` | `@testing-library/react` | `vitest` or `jest` |
+| **Vue 3** | `vue` (^3.x) | `@vue/test-utils` + `@testing-library/vue` | `vitest` |
+| **Vue 2** | `vue` (^2.x) | `@vue/test-utils` v1 | `jest` |
+| **Angular** | `@angular/core` | `@angular/core/testing` + `TestBed` | `karma` or `jest` |
+| **Svelte** | `svelte` | `@testing-library/svelte` | `vitest` |
+| **Vanilla HTML/JS** | no framework dep | SKIP component tests | SKIP unit tests (or use `vitest` for utils) |
+| **SolidJS** | `solid-js` | `@solidjs/testing-library` | `vitest` |
+
+### Step 2: Detect Build Tool
+
+| Build Tool | Config File | Dev Command | Bundle Path |
+|-----------|-------------|-------------|-------------|
+| **Next.js** | `next.config.*` | `npm run dev` | `.next/static/chunks/*.js` |
+| **Vite** | `vite.config.*` | `npm run dev` | `dist/assets/*.js` |
+| **CRA** | `react-scripts` in deps | `npm start` | `build/static/js/*.js` |
+| **Angular CLI** | `angular.json` | `ng serve` | `dist/*.js` |
+| **SvelteKit** | `svelte.config.js` | `npm run dev` | `.svelte-kit/output/client/*.js` |
+| **None (static HTML)** | `index.html` only | `npx serve -p 3000` | N/A (skip bundle analysis) |
+
+### Step 3: Check Tools & Tell User
+
+After detecting the stack, check what's installed and tell the user what they need:
+
+```bash
+# Check tools
+npx playwright --version 2>/dev/null || echo "MISSING: playwright"
+npx vitest --version 2>/dev/null || echo "MISSING: vitest"
+```
+
+**Example output after pre-flight:**
+
+```
+=== Pre-flight Check ===
+Framework:       Next.js 15 (React 18)
+Build tool:      Next.js (Turbopack)
+Dev server:      npm run dev → localhost:3000 (✅ running)
+Playwright:      ✅ 1.59.1
+Vitest:          ✅ 4.1.5
+axe-core:        ❌ not installed
+Component lib:   @testing-library/react ✅
+
+Actions needed:
+  npm install -D @axe-core/playwright          # for Dimension 3 (a11y)
+
+Dimensions that will SKIP:
+  None — all 6 dimensions will run.
+
+Proceed? (y/n)
+```
+
+### Step 4: Adapt Patterns
+
+Based on detected framework, use the correct patterns in Dimension 1:
+
+| If Framework Is | Use Pattern From |
+|----------------|-----------------|
+| React / Next.js | Dimension 1 → "Pattern: React / Next.js" |
+| Vue 2/3 | Dimension 1 → "Pattern: Vue" |
+| Angular | Dimension 1 → "Pattern: Angular" |
+| Svelte / SvelteKit | Dimension 1 → "Pattern: Svelte" |
+| Vanilla HTML/JS | Dimension 1 → skip 1.1 & 1.2, use 1.3 (E2E only) |
+| SolidJS | Dimension 1 → "Pattern: SolidJS" |
+
+**Do NOT proceed to Dimension 1 until the user confirms the pre-flight output.**
+
+---
+
 ## Quick Start
 
-1. **Gather context**: Read the project's `CLAUDE.md`, `AGENTS.md`, or `README.md`. Identify: dev server command, port number, auth method, key routes, component tree, API endpoints.
+1. **Run Pre-flight Check** (above) — detects framework, checks tools, tells user what to install.
 2. **Explore UI**: Navigate key pages, inspect rendered DOM, identify selectors and ARIA roles.
-3. **Write tests**: One spec file per dimension, using patterns below.
+3. **Write tests**: One spec file per dimension, using framework-adapted patterns below.
 4. **Run dimensions in order**: functional → visual → a11y → security → compatibility → performance.
 5. **Report**: Generate `TEST-REPORT.md` at project root with full findings.
 
@@ -107,12 +185,12 @@ Before writing any test, collect:
 - **State management**: Zustand? Redux? Context? What stores exist?
 - **Selector map**: Key element selectors for buttons, inputs, dialogs (from DOM inspection).
 
-### 1.1 Unit Tests (Vitest)
+### 1.1 Unit Tests
 
-Test pure functions in isolation. No DOM, no browser.
+Test pure functions in isolation. No DOM, no browser. The test runner (`vitest` or `jest`) is framework-agnostic — patterns below work for any stack.
 
 ```ts
-import { describe, it, expect } from "vitest";
+import { describe, it, expect } from "vitest"; // or jest
 
 describe("formatRelativeTime", () => {
   it("returns 'just now' for < 1 minute", () => {
@@ -127,11 +205,13 @@ describe("formatRelativeTime", () => {
 });
 ```
 
-Common targets: time formatting, ID generation, text transforms, data validation, alias/language mapping, URL extraction, token estimation.
+Common targets across all frameworks: time formatting, ID generation, text transforms, data validation, alias/language mapping, URL extraction, token estimation.
 
-### 1.2 Component Tests (RTL + Vitest)
+### 1.2 Component Tests
 
-Isolate one component. Mock dependencies and context providers.
+Isolate one component. Mock dependencies and context providers. **Pattern depends on framework detected in pre-flight check.**
+
+#### Pattern: React / Next.js
 
 ```ts
 import { render, screen } from "@testing-library/react";
@@ -141,16 +221,67 @@ describe("MessageBubble", () => {
     render(<MessageBubble role="user" content="hello" />);
     expect(screen.getByText("hello")).toBeInTheDocument();
   });
+});
+```
 
-  it("renders code block with syntax highlighting", async () => {
-    render(<MessageBubble role="assistant" content="```ts\nconst x = 1\n```" />);
-    await screen.findByText("const x = 1", {}, { timeout: 5000 });
-    expect(screen.getByText("ts")).toBeInTheDocument();
+#### Pattern: Vue 3
+
+```ts
+import { render, screen } from "@testing-library/vue";
+import MessageBubble from "./MessageBubble.vue";
+
+describe("MessageBubble", () => {
+  it("renders user message", () => {
+    render(MessageBubble, { props: { role: "user", content: "hello" } });
+    expect(screen.getByText("hello")).toBeTruthy();
   });
 });
 ```
 
-Key components to test: message bubbles, sidebar/chat list items, search dialog, settings/account panels, error states, loading skeletons.
+#### Pattern: Angular
+
+```ts
+import { ComponentFixture, TestBed } from "@angular/core/testing";
+import { MessageBubbleComponent } from "./message-bubble.component";
+
+describe("MessageBubbleComponent", () => {
+  let fixture: ComponentFixture<MessageBubbleComponent>;
+
+  beforeEach(async () => {
+    await TestBed.configureTestingModule({
+      declarations: [MessageBubbleComponent],
+    }).compileComponents();
+    fixture = TestBed.createComponent(MessageBubbleComponent);
+    fixture.componentInstance.role = "user";
+    fixture.componentInstance.content = "hello";
+    fixture.detectChanges();
+  });
+
+  it("renders user message", () => {
+    expect(fixture.nativeElement.textContent).toContain("hello");
+  });
+});
+```
+
+#### Pattern: Svelte
+
+```ts
+import { render, screen } from "@testing-library/svelte";
+import MessageBubble from "./MessageBubble.svelte";
+
+describe("MessageBubble", () => {
+  it("renders user message", () => {
+    render(MessageBubble, { props: { role: "user", content: "hello" } });
+    expect(screen.getByText("hello")).toBeTruthy();
+  });
+});
+```
+
+#### Pattern: Vanilla HTML/JS
+
+**Skip component tests.** Use Dimension 1.3 (E2E) exclusively. Unit-test utility functions if they exist.
+
+Key components to test (framework-dependent): message bubbles, sidebar/list items, search dialog, settings panels, error states, loading skeletons.
 
 ### 1.3 Integration / E2E (Playwright)
 
@@ -782,9 +913,13 @@ e2e/
   compat.spec.ts           # multi-browser + network
   perf.spec.ts             # page load + bundle + API
   screenshots/             # visual regression baselines
-src/__tests__/
-  *.test.ts                # Vitest unit tests
-  *.component.test.tsx     # RTL component tests (React)
+
+# Unit/component tests — location depends on framework:
+#   React/Next.js:  src/__tests__/ or src/**/*.test.ts
+#   Vue:            src/**/__tests__/ or src/**/*.spec.ts
+#   Angular:        src/app/**/*.spec.ts
+#   Svelte:         src/**/*.test.ts
+#   Vanilla:        tests/ (utilities only, no component tests)
 ```
 
 ## Pitfalls
@@ -798,6 +933,8 @@ src/__tests__/
 - **Dialog handlers**: Register `page.on("dialog", callback)` BEFORE the click that triggers it.
 - **CDP network emulation**: `Network.emulateNetworkConditions` is Chromium-only. For Firefox/Safari, use `page.route()` with artificial delays.
 - **Content filters**: Some LLM providers (Kimi, Moonshot, enterprise gateways) may reject security testing content as "high risk". The skill handles this gracefully — skips payload injection tests, notes it in the report, and continues with all other dimensions.
+- **Framework detection**: Always run the Pre-flight Check first. The skill adapts patterns for React, Vue, Angular, Svelte, and vanilla HTML. Never assume React.
+- **Component test tools**: Each framework has different testing tools. Use `@testing-library/react` for React, `@vue/test-utils` for Vue, `TestBed` for Angular, `@testing-library/svelte` for Svelte.
 
 ## Cleanup
 
