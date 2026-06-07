@@ -1,0 +1,7 @@
+interface:
+  display_name: "DD Web Full Test"
+  short_description: "Six-dimension report-only web app QA"
+  default_prompt: "Use $dd-web-full-test to run a full report-only QA audit for this web app."
+
+policy:
+  allow_implicit_invocation: true

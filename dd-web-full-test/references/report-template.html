@@ -1,0 +1,210 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Test Report - {{PROJECT_NAME}}</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #f6f7f9;
+      --panel: #ffffff;
+      --text: #17202a;
+      --muted: #657386;
+      --border: #d9dee7;
+      --pass: #0f7b3f;
+      --fail: #b42318;
+      --skip: #8a5a00;
+      --info: #175cd3;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      line-height: 1.5;
+    }
+    main {
+      max-width: 1180px;
+      margin: 0 auto;
+      padding: 32px 20px 56px;
+    }
+    header, section {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 20px;
+      margin-bottom: 16px;
+    }
+    h1, h2, h3 { margin: 0 0 12px; line-height: 1.2; }
+    h1 { font-size: 28px; }
+    h2 { font-size: 20px; }
+    h3 { font-size: 16px; margin-top: 18px; }
+    .meta {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 10px;
+      margin-top: 16px;
+    }
+    .metric {
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 10px;
+      background: #fbfcfe;
+    }
+    .metric span {
+      display: block;
+      color: var(--muted);
+      font-size: 12px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 12px 0;
+      font-size: 14px;
+    }
+    th, td {
+      border: 1px solid var(--border);
+      padding: 9px 10px;
+      text-align: left;
+      vertical-align: top;
+    }
+    th { background: #eef2f7; }
+    code, pre {
+      font-family: "SFMono-Regular", Consolas, monospace;
+      font-size: 13px;
+    }
+    pre {
+      overflow-x: auto;
+      background: #101828;
+      color: #f8fafc;
+      border-radius: 6px;
+      padding: 12px;
+    }
+    .badge {
+      display: inline-block;
+      border-radius: 999px;
+      padding: 2px 8px;
+      font-size: 12px;
+      font-weight: 700;
+    }
+    .pass { color: var(--pass); background: #dcfae6; }
+    .fail { color: var(--fail); background: #fee4e2; }
+    .skip { color: var(--skip); background: #fef0c7; }
+    .info { color: var(--info); background: #dbeafe; }
+    .muted { color: var(--muted); }
+    ul { margin: 8px 0 0 20px; padding: 0; }
+  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <h1>Test Report - {{PROJECT_NAME}}</h1>
+      <p class="muted">{{SUMMARY_SENTENCE}}</p>
+      <div class="meta">
+        <div class="metric"><span>Date</span>{{DATE}}</div>
+        <div class="metric"><span>Tested URL</span>{{URL}}</div>
+        <div class="metric"><span>Framework</span>{{FRAMEWORK}}</div>
+        <div class="metric"><span>Build Tool</span>{{BUILD_TOOL}}</div>
+        <div class="metric"><span>Dimensions Run</span>{{RUN_COUNT}}/6</div>
+        <div class="metric"><span>Overall Status</span><span class="badge {{OVERALL_CLASS}}">{{OVERALL_STATUS}}</span></div>
+      </div>
+    </header>
+
+    <section>
+      <h2>Summary</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Dimension</th>
+            <th>Status</th>
+            <th>Run</th>
+            <th>Passed</th>
+            <th>Failed</th>
+            <th>Skipped</th>
+            <th>Key Finding</th>
+          </tr>
+        </thead>
+        <tbody>
+          {{SUMMARY_ROWS}}
+        </tbody>
+      </table>
+    </section>
+
+    <section>
+      <h2>Critical Findings</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Severity</th>
+            <th>Area</th>
+            <th>Finding</th>
+            <th>Evidence</th>
+            <th>Repro</th>
+          </tr>
+        </thead>
+        <tbody>
+          {{FINDING_ROWS}}
+        </tbody>
+      </table>
+    </section>
+
+    <section>
+      <h2>Functional</h2>
+      {{FUNCTIONAL_CONTENT}}
+    </section>
+
+    <section>
+      <h2>Visual</h2>
+      {{VISUAL_CONTENT}}
+    </section>
+
+    <section>
+      <h2>Accessibility</h2>
+      {{ACCESSIBILITY_CONTENT}}
+    </section>
+
+    <section>
+      <h2>Security</h2>
+      {{SECURITY_CONTENT}}
+    </section>
+
+    <section>
+      <h2>Compatibility</h2>
+      {{COMPATIBILITY_CONTENT}}
+    </section>
+
+    <section>
+      <h2>Performance</h2>
+      {{PERFORMANCE_CONTENT}}
+    </section>
+
+    <section>
+      <h2>Console And Network Errors</h2>
+      {{ERROR_CONTENT}}
+    </section>
+
+    <section>
+      <h2>Recommendations</h2>
+      <h3>Critical</h3>
+      <ul>{{CRITICAL_RECOMMENDATIONS}}</ul>
+      <h3>Should Fix</h3>
+      <ul>{{SHOULD_FIX_RECOMMENDATIONS}}</ul>
+      <h3>Nice To Have</h3>
+      <ul>{{NICE_TO_HAVE_RECOMMENDATIONS}}</ul>
+    </section>
+
+    <section>
+      <h2>Artifacts</h2>
+      <ul>
+        <li>Test files: {{TEST_FILES}}</li>
+        <li>Playwright report: {{PLAYWRIGHT_REPORT}}</li>
+        <li>Screenshot diffs: {{SCREENSHOT_DIFFS}}</li>
+        <li>Raw logs: {{RAW_LOGS}}</li>
+      </ul>
+    </section>
+  </main>
+</body>
+</html>

@@ -1,23 +1,26 @@
 # DD Agent Skills
 
-Portable, agent-agnostic skills for AI coding assistants. All skills use the `dd-` prefix convention.
+Portable skills for AI coding assistants. All skills use the `dd-` prefix convention.
 
-**Works with**: Claude Code, Codex, Cursor, Hermes, GitHub Copilot — zero agent-specific tool calls.
+**Works with**: Codex/OpenAI skills, Claude Code, Cursor, Hermes, and GitHub Copilot. Skill instructions avoid agent-specific tool calls unless an installing agent adds its own wrapper.
 
 ## Available Skills
 
-### `dd-webapp-full-test`
+### `dd-web-full-test`
 
 Comprehensive web application testing across 6 dimensions. Tell your agent *"test my app thoroughly"* and get a complete audit.
 
-| Step | Output |
-|------|--------|
-| 1. Pre-flight | Detects framework, build tool, installed tools, missing deps |
-| 2. Lock dimensions | User confirms which 6 dimensions run, which skip |
-| 3. Execution plan | Detailed per-dimension plan — exactly what gets tested, user approves |
-| 4. Execute | All dimensions run in order: functional → visual → a11y → security → compatibility → performance |
-| 5. Report | `TEST-REPORT.md` at project root with pass/fail, issues, recommendations |
-| 6. Cleanup | Temporary artifacts removed; scripts + report kept |
+| Phase | Output |
+|-------|--------|
+| 0. Scope | Target app, tested URL, credentials/data needs, report-only boundary |
+| 1. Pre-flight | Framework, build tool, server status, installed tools, missing deps |
+| 2. Dependency gate | Install request or skipped dimensions recorded |
+| 3. Coverage plan | Dimension-by-dimension plan, test files, commands, artifacts |
+| 4. Surface discovery | Routes, flows, selectors, APIs, visual states, breakpoints |
+| 5. Test build | Focused test files under `e2e/`, `tests/`, or existing test paths |
+| 6. Execute | Functional → visual → a11y → security → compatibility → performance |
+| 7. Report | `TEST-REPORT.html` with evidence, failures, skips, recommendations |
+| 8. Handoff | Chat summary with top findings and cleanup recommendation |
 
 | # | Dimension | What it tests |
 |---|-----------|---------------|
@@ -32,19 +35,19 @@ Comprehensive web application testing across 6 dimensions. Tell your agent *"tes
 
 **Stack**: Playwright + Vitest + React Testing Library + axe-core.
 
-**Files**: [`dd-webapp-full-test/SKILL.md`](dd-webapp-full-test/SKILL.md) + 3 pre-flight scripts + 4 reference checklists.
+**Files**: [`dd-web-full-test/SKILL.md`](dd-web-full-test/SKILL.md), `agents/openai.yaml`, 3 pre-flight scripts, 3 checklist references, 1 report template, and optional security payload data.
 
 ### Critical Rules (agent-enforced)
 
 The skill instructs agents to follow three hard rules:
 
-1. **Never modify business code** — write tests to `e2e/`, write results to `TEST-REPORT.md`. Never touch application logic, components, styles, or config. All issues go into the report; the user decides what to fix.
+1. **Never modify business code** — write tests to `e2e/`, write results to `TEST-REPORT.html`. Never touch application logic, components, styles, or config. All issues go into the report; the user decides what to fix.
 2. **Test results are facts** — `PASS`, `FAIL`, or `SKIP` only. No "this is fine" judgments.
 3. **Ask before installing** — never `npm install` without explicit user confirmation.
 
 ### Pre-flight Scripts
 
-Three fallback scripts auto-detect your stack. Agent tries each in order:
+Three fallback scripts auto-detect your stack. The agent tries each in order:
 
 | Script | Runtime | When |
 |--------|---------|------|
@@ -66,7 +69,7 @@ Auto-detected and pattern-adapted: React, Next.js, Vue 2/3, Angular, Svelte, Sol
 
 Tell your agent:
 
-> "Install `dd-webapp-full-test` from https://github.com/dojeee/agent-skills"
+> "Install `dd-web-full-test` from https://github.com/dojeee/agent-skills"
 
 The agent should execute:
 
@@ -77,19 +80,19 @@ git clone https://github.com/dojeee/agent-skills /tmp/agent-skills
 # Copy to the correct location for YOUR agent:
 # Claude Code (per-project):
 mkdir -p .claude/skills
-cp -r /tmp/agent-skills/dd-webapp-full-test .claude/skills/
+cp -r /tmp/agent-skills/dd-web-full-test .claude/skills/
 
 # Hermes (per-user):
 mkdir -p ~/.hermes/skills
-cp -r /tmp/agent-skills/dd-webapp-full-test ~/.hermes/skills/
+cp -r /tmp/agent-skills/dd-web-full-test ~/.hermes/skills/
 
 # Codex / Cursor (per-project):
 mkdir -p .codex/skills
-cp -r /tmp/agent-skills/dd-webapp-full-test .codex/skills/
+cp -r /tmp/agent-skills/dd-web-full-test .codex/skills/
 
 # Verify
-ls .claude/skills/dd-webapp-full-test/SKILL.md  # or your agent's path
-ls .claude/skills/dd-webapp-full-test/references/
+ls .claude/skills/dd-web-full-test/SKILL.md  # or your agent's path
+ls .claude/skills/dd-web-full-test/references/
 
 # Cleanup
 rm -rf /tmp/agent-skills
@@ -107,12 +110,11 @@ rm -rf /tmp/agent-skills
 ### Verify Installation
 
 ```bash
-cat .claude/skills/dd-webapp-full-test/SKILL.md | head -6
+cat .claude/skills/dd-web-full-test/SKILL.md | head -6
 # Should show:
 # ---
-# name: dd-webapp-full-test
-# description: |
-#   Comprehensive web app testing across 6 dimensions...
+# name: dd-web-full-test
+# description: Comprehensive report-only web application QA...
 ```
 
 ### Post-Install — Reference in Project Config
@@ -122,15 +124,15 @@ After installing, the agent will ask whether to add a reference to `CLAUDE.md` o
 ```markdown
 ## Testing
 
-Run comprehensive tests with the dd-webapp-full-test skill:
+Run comprehensive tests with the dd-web-full-test skill:
 
 - "test my app thoroughly" — runs 6-dimension audit (functional, visual, a11y, security, compatibility, performance)
 - "run all 6 test dimensions" — same
 - "comprehensive test" — same
 - "security scan" — dimension 4 only
 
-Skill location: `.claude/skills/dd-webapp-full-test/SKILL.md` (or your agent's skill directory).
-Tests are written to `e2e/`. Results in `TEST-REPORT.md`.
+Skill location: `.claude/skills/dd-web-full-test/SKILL.md` (or your agent's skill directory).
+Tests are written to `e2e/`. Results in `TEST-REPORT.html`.
 ```
 
 ## Naming Convention
@@ -139,21 +141,26 @@ All skills use the `dd-` prefix:
 
 ```
 dd-<skill-name>/
-├── SKILL.md              # Main instructions: patterns, code templates, pitfalls
+├── SKILL.md              # Main instructions and resource map
+├── agents/openai.yaml    # OpenAI/Codex platform display metadata
 ├── scripts/              # Pre-flight checks, helpers
-└── references/           # Detailed checklists, payload lists, metric definitions
+└── references/           # Detailed checklists, templates, metric definitions
 ```
 
 ## Contributing
 
 Guidelines:
 - Prefix with `dd-`
-- Pure English (code examples may contain non-English content for testing)
-- No agent-specific tool calls
-- Include a "Pitfalls" section with common mistakes
-- Include a "CRITICAL RULES" section that forbids agents from modifying business code
+- Keep `SKILL.md` concise; move long templates and checklists into `references/`
+- Put all trigger guidance in the frontmatter `description`
+- Use only `name` and `description` in `SKILL.md` frontmatter for Codex/OpenAI compatibility
+- Include `agents/openai.yaml` for platform display metadata
+- Use pure English instructions; examples may contain non-English content for rendering tests
+- Avoid agent-specific tool calls in the skill body
+- Include a pitfalls section with common mistakes
+- Include hard rules that forbid agents from modifying business code
 - Test your skill against a deliberately buggy app to verify it catches issues
-- Be mindful of LLM content filters — avoid putting raw security payloads in the main SKILL.md; use separate data/ files instead (not auto-loaded by agents)
+- Be mindful of LLM content filters; keep raw security payloads out of `SKILL.md` and load `data/` files only when needed
 
 ## License
 

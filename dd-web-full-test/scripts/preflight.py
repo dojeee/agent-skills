@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
-"""Pre-flight check for dd-webapp-full-test. Outputs JSON."""
-import json, os, subprocess, sys
+"""Pre-flight check for dd-web-full-test. Outputs JSON."""
+import json, os, subprocess
 
 PKG = "package.json"
 result = {
@@ -35,13 +35,18 @@ else:
 
 # ── Check tools ────────────────────────────────────────────────────
 
-def ver(cmd):
-    try: return subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT, timeout=5).decode().strip().split("\n")[-1]
-    except: return None
+def ver(*commands):
+    for cmd in commands:
+        try:
+            out = subprocess.check_output(cmd, stderr=subprocess.DEVNULL, timeout=5)
+            return out.decode().strip().split("\n")[-1]
+        except Exception:
+            pass
+    return None
 
-result["tools"]["playwright"] = ver("npx playwright --version 2>/dev/null || playwright --version 2>/dev/null")
-result["tools"]["vitest"] = ver("npx vitest --version 2>/dev/null")
-result["tools"]["jest"] = ver("npx jest --version 2>/dev/null")
+result["tools"]["playwright"] = ver(["node_modules/.bin/playwright", "--version"], ["playwright", "--version"])
+result["tools"]["vitest"] = ver(["node_modules/.bin/vitest", "--version"], ["vitest", "--version"])
+result["tools"]["jest"] = ver(["node_modules/.bin/jest", "--version"], ["jest", "--version"])
 result["tools"]["axe"] = os.path.exists("node_modules/@axe-core/playwright")
 
 try:

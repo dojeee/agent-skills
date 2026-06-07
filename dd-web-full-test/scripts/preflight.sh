@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Pre-flight check for dd-webapp-full-test. Outputs JSON.
+# Pre-flight check for dd-web-full-test. Outputs JSON.
 # Usage: bash scripts/preflight.sh
 # All npx calls have a 10s timeout to avoid hanging.
 
@@ -48,18 +48,39 @@ fi
 
 # ── Check tools (with timeout) ──────────────────────────────────────
 
-command -v npx >/dev/null 2>&1 && {
-  PW_VER=$(_run npx playwright --version 2>/dev/null | tail -1)
-  VT_VER=$(_run npx vitest --version 2>/dev/null | tail -1)
-  JEST_VER=$(_run npx jest --version 2>/dev/null | tail -1)
-}
+[ -x "node_modules/.bin/playwright" ] && PW_VER=$(_run node_modules/.bin/playwright --version 2>/dev/null | tail -1)
+[ -x "node_modules/.bin/vitest" ] && VT_VER=$(_run node_modules/.bin/vitest --version 2>/dev/null | tail -1)
+[ -x "node_modules/.bin/jest" ] && JEST_VER=$(_run node_modules/.bin/jest --version 2>/dev/null | tail -1)
 [ -z "$PW_VER" ] && command -v playwright >/dev/null 2>&1 && PW_VER=$(_run playwright --version 2>/dev/null | tail -1)
+[ -z "$VT_VER" ] && command -v vitest >/dev/null 2>&1 && VT_VER=$(_run vitest --version 2>/dev/null | tail -1)
+[ -z "$JEST_VER" ] && command -v jest >/dev/null 2>&1 && JEST_VER=$(_run jest --version 2>/dev/null | tail -1)
 [ -d "node_modules/@axe-core/playwright" ] && AXE=true
 
 # Dev server (2s timeout)
 curl -s --max-time 2 -o /dev/null -w "%{http_code}" "http://localhost:$PORT" 2>/dev/null | grep -q "200\|301\|302\|304" && DEV_RUNNING=true
 
 # ── Output JSON ──────────────────────────────────────────────────────
+
+json_or_null() {
+  if [ -n "$1" ]; then
+    printf '"%s"' "$(printf '%s' "$1" | sed 's/\\/\\\\/g; s/"/\\"/g')"
+  else
+    printf 'null'
+  fi
+}
+
+MISSING=""
+add_missing() {
+  if [ -z "$MISSING" ]; then
+    MISSING="\"$1\""
+  else
+    MISSING="$MISSING, \"$1\""
+  fi
+}
+
+[ -z "$PW_VER" ] && add_missing "@playwright/test"
+[ -z "$VT_VER" ] && [ -z "$JEST_VER" ] && add_missing "vitest"
+[ "$AXE" = false ] && add_missing "@axe-core/playwright"
 
 cat <<JSONEOF
 {
@@ -68,17 +89,13 @@ cat <<JSONEOF
   "devServerPort": "$PORT",
   "devServerRunning": $DEV_RUNNING,
   "tools": {
-    "playwright": "${PW_VER:-null}",
-    "vitest": "${VT_VER:-null}",
-    "jest": "${JEST_VER:-null}",
+    "playwright": $(json_or_null "$PW_VER"),
+    "vitest": $(json_or_null "$VT_VER"),
+    "jest": $(json_or_null "$JEST_VER"),
     "axe": $AXE
   },
-  "componentLib": "${CLIB:-null}",
-  "missingTools": [
-    $([ -z "$PW_VER" ] && echo '"@playwright/test",')
-    $([ -z "$VT_VER" ] && [ -z "$JEST_VER" ] && echo '"vitest",')
-    $([ "$AXE" = false ] && echo '"@axe-core/playwright"')
-  ],
+  "componentLib": $(json_or_null "$CLIB"),
+  "missingTools": [$MISSING],
   "runner": "shell"
 }
 JSONEOF

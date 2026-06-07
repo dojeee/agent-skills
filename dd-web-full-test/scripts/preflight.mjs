@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Pre-flight check for dd-webapp-full-test.
+ * Pre-flight check for dd-web-full-test.
  * Detects framework, build tool, installed tools. Outputs JSON.
  * Usage: node scripts/preflight.mjs
  */
@@ -54,9 +54,9 @@ function getVersion(cmd) {
   } catch { return null; }
 }
 
-result.tools.playwright = getVersion("npx playwright --version") || getVersion("playwright --version");
-result.tools.vitest = getVersion("npx vitest --version");
-result.tools.jest = getVersion("npx jest --version");
+result.tools.playwright = getVersion("node_modules/.bin/playwright --version") || getVersion("playwright --version");
+result.tools.vitest = getVersion("node_modules/.bin/vitest --version") || getVersion("vitest --version");
+result.tools.jest = getVersion("node_modules/.bin/jest --version") || getVersion("jest --version");
 result.tools.axe = existsSync("node_modules/@axe-core/playwright");
 
 // Dev server check — sync, blocks max 2s. Sets devServerRunning to true if reachable.
